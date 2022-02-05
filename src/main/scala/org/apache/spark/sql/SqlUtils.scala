@@ -130,7 +130,7 @@ object SqlUtils {
                                      schema: StructType,
                                      attributes: Seq[Attribute]): DataFrame = {
     val encoder = RowEncoder(schema)
-    val catalystRows = rdd.map(encoder.toRow)
+    val catalystRows = rdd.map(encoder.createSerializer())
     val logicalPlan = LogicalRDD(
       attributes,
       catalystRows,

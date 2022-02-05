@@ -208,7 +208,8 @@ private[hiveacid] class HiveAcidRDD[K, V](sc: SparkContext,
       broadcastedConf, shouldCloneJobConf, initLocalJobConfFuncOpt)
 
     // add the credentials here as this can be called before SparkContext initialized
-    SparkHadoopUtil.get.addCredentials(jobConf)
+    // SparkHadoopUtil.get.addCredentials(jobConf)
+
     val paths = FileInputFormat.getInputPaths(jobConf)
     val partitions = HiveAcidPartitionComputer.getFromSplitsCache(paths, validWriteIds)
     if (partitions.isDefined) {

@@ -16,7 +16,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.{First, Last}
 import org.apache.spark.sql.catalyst.parser.{ParseException, ParserUtils}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
+import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier,SQLConfHelper}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.CalendarInterval
@@ -27,10 +27,11 @@ import scala.collection.mutable.ArrayBuffer
 /**
  * An adaptation of [[org.apache.spark.sql.catalyst.parser.AstBuilder]]
  */
-class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging {
+// class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging {
+class AstBuilder extends SqlHiveBaseVisitor[AnyRef] with SQLConfHelper with Logging {
   import ParserUtils._
 
-  def this() = this(new SQLConf())
+  // def this() = this(new SQLConf())
 
   protected def typedVisit[T](ctx: ParseTree): T = {
     ctx.accept(this).asInstanceOf[T]
@@ -292,7 +293,7 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
   override def visitFromClause(ctx: FromClauseContext): LogicalPlan = withOrigin(ctx) {
     val from = ctx.relation.asScala.foldLeft(null: LogicalPlan) { (left, relation) =>
       val right = plan(relation.relationPrimary)
-      val join = right.optionalMap(left)(Join(_, _, Inner, None))
+      val join = right.optionalMap(left)(Join(_,_,Inner, None,JoinHint.NONE))
       withJoinRelations(join, relation)
     }
     if (ctx.pivotClause() != null) {
@@ -502,7 +503,7 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
           case None =>
             (baseJoinType, None)
         }
-        Join(left, plan(join.right), joinType, condition)
+        Join(left, plan(join.right), joinType, condition, JoinHint.NONE)
       }
     }
   }
@@ -904,7 +905,7 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
       case SqlBaseParser.IN =>
         invertIfNotDefined(In(e, ctx.expression.asScala.map(expression)))
       case SqlBaseParser.LIKE =>
-        invertIfNotDefined(Like(e, expression(ctx.pattern)))
+        invertIfNotDefined(Like(e, expression(ctx.pattern),'\\'))
       case SqlBaseParser.RLIKE =>
         invertIfNotDefined(RLike(e, expression(ctx.pattern)))
       case SqlBaseParser.NULL if ctx.NOT != null =>
@@ -994,7 +995,7 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
    */
   override def visitFirst(ctx: FirstContext): Expression = withOrigin(ctx) {
     val ignoreNullsExpr = ctx.IGNORE != null
-    First(expression(ctx.expression), Literal(ignoreNullsExpr)).toAggregateExpression()
+    First(expression(ctx.expression), ignoreNullsExpr).toAggregateExpression()
   }
 
   /**
@@ -1002,7 +1003,7 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
    */
   override def visitLast(ctx: LastContext): Expression = withOrigin(ctx) {
     val ignoreNullsExpr = ctx.IGNORE != null
-    Last(expression(ctx.expression), Literal(ignoreNullsExpr)).toAggregateExpression()
+    Last(expression(ctx.expression), ignoreNullsExpr).toAggregateExpression()
   }
 
   /**
@@ -1303,7 +1304,7 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
     } else {
       direction.defaultNullOrdering
     }
-    SortOrder(expression(ctx.expression), direction, nullOrdering, Set.empty)
+    SortOrder(expression(ctx.expression), direction, nullOrdering, Seq.empty)
   }
 
   /**
@@ -1462,7 +1463,9 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
   override def visitInterval(ctx: IntervalContext): Literal = withOrigin(ctx) {
     val intervals = ctx.intervalField.asScala.map(visitIntervalField)
     validate(intervals.nonEmpty, "at least one time unit should be given for interval literal", ctx)
-    Literal(intervals.reduce(_.add(_)))
+    // Literal(intervals.reduce(_.add(_)))
+    // Temporarily bypass
+    Literal(intervals)
   }
 
   /**
@@ -1476,6 +1479,7 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
     val s = value.getText
     try {
       val unitText = unit.getText.toLowerCase(Locale.ROOT)
+      /*
       val interval = (unitText, Option(to).map(_.getText.toLowerCase(Locale.ROOT))) match {
         case (u, None) if u.endsWith("s") =>
           // Handle plural forms, e.g: yearS/monthS/weekS/dayS/hourS/minuteS/hourS/...
@@ -1489,6 +1493,8 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
         case (from, Some(t)) =>
           throw new ParseException(s"Intervals FROM $from TO $t are not supported.", ctx)
       }
+      */
+      val interval = new CalendarInterval(0,0,0)
       validate(interval != null, "No interval can be constructed", ctx)
       interval
     } catch {
@@ -1507,7 +1513,8 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
    * Create a Spark DataType.
    */
   private def visitSparkDataType(ctx: DataTypeContext): DataType = {
-    HiveStringType.replaceCharType(typedVisit(ctx))
+    // HiveStringType.replaceCharType(typedVisit(ctx))
+    typedVisit(ctx)
   }
 
   /**
@@ -1580,9 +1587,10 @@ class AstBuilder(conf: SQLConf) extends SqlHiveBaseVisitor[AnyRef] with Logging 
     }
     // Add Hive type string to metadata.
     val rawDataType = typedVisit[DataType](ctx.dataType)
-    val cleanedDataType = HiveStringType.replaceCharType(rawDataType)
+    // val cleanedDataType = HiveStringType.replaceCharType(rawDataType)
+    val cleanedDataType = rawDataType
     if (rawDataType != cleanedDataType) {
-      builder.putString(HIVE_TYPE_STRING, rawDataType.catalogString)
+      builder.putString("HIVE_TYPE_STRING", rawDataType.catalogString)
     }
 
     StructField(

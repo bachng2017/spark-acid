@@ -10,7 +10,7 @@ import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.parser.{ParseErrorListener, ParseException, ParserInterface}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.trees.Origin
-import org.apache.spark.sql.execution.SparkSqlParser
+import org.apache.spark.sql.execution.{SparkSqlParser,SparkSqlAstBuilder}
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
 import org.apache.spark.sql.types.{DataType, StructType}
 
@@ -35,6 +35,7 @@ case class SparkAcidSqlParser(sparkParser: ParserInterface) extends ParserInterf
     field.get(sparkParser).asInstanceOf[VariableSubstitution]
   }
 
+  /*
   // FIXME scala reflection would be better
   private val conf: SQLConf = {
     val field = classOf[VariableSubstitution].getDeclaredField("org$apache$spark$sql$internal$VariableSubstitution$$conf")
@@ -43,6 +44,18 @@ case class SparkAcidSqlParser(sparkParser: ParserInterface) extends ParserInterf
   }
 
   private val sparkAcidAstBuilder = new SparkSqlAstBuilder(conf)
+  */
+
+  // sparkParser has a SparkSqlAstBuilder but we initialize our own SparkSqlAsBuilder
+  //
+  /*
+  private val sparkAcidAstBuilder: SparkSqlAstBuilder = {
+    val field = classOf[SparkSqlParser].getDeclaredField("astBuilder")
+    field.setAccessible(true)
+    field.get(sparkParser).asInstanceOf[SparkSqlAstBuilder]
+  }
+  */
+  private val sparkAcidAstBuilder = new SparkSqlAstBuilder
 
   override def parsePlan(sqlText: String): LogicalPlan = {
     try {
@@ -57,6 +70,10 @@ case class SparkAcidSqlParser(sparkParser: ParserInterface) extends ParserInterf
       case _: ParseException => sparkParser.parsePlan(sqlText)
     }
   }
+
+  override def parseMultipartIdentifier(sqlText: String): Seq[String] = sparkParser.parseMultipartIdentifier(sqlText)
+  
+
 
   /**
    *  An adaptation of [[org.apache.spark.sql.execution.SparkSqlParser#parse]]

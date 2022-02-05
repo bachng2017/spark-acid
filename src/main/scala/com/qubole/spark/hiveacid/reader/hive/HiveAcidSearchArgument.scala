@@ -88,8 +88,8 @@ private[hive] object HiveAcidSearchArgument {
   private def isSearchableType(dataType: DataType) = dataType match {
     case BinaryType => false
     case DateType | BinaryType | ByteType | IntegerType | LongType | ShortType
-         | DoubleType | FloatType | _: DecimalType | BooleanType
-         | _: HiveStringType | TimestampType | StringType =>
+         | DoubleType | FloatType | BooleanType
+         | TimestampType | StringType =>
       true
     case _ => false
   }

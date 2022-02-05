@@ -40,7 +40,7 @@ private[hiveacid] object HiveConverter extends Logging {
   def getCatalystStructField(hc: FieldSchema): StructField = {
     val columnType = getCatalystType(hc.getType)
     val metadata = if (hc.getType != columnType.catalogString) {
-      new MetadataBuilder().putString(HIVE_TYPE_STRING, hc.getType).build()
+      new MetadataBuilder().putString("HIVE_TYPE_STRING", hc.getType).build()
     } else {
       Metadata.empty
     }

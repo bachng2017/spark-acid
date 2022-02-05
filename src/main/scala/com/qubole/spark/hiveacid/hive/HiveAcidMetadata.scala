@@ -30,7 +30,8 @@ import com.qubole.shaded.hadoop.hive.ql.plan.TableDesc
 import com.qubole.spark.hiveacid.util.Util
 import com.qubole.spark.hiveacid.HiveAcidErrors
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.api.MetaException
+// import org.apache.hadoop.hive.metastore.api.MetaException
+import com.qubole.shaded.hadoop.hive.metastore.api.MetaException
 import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapred.{InputFormat, OutputFormat}
 import org.apache.spark.internal.Logging
@@ -46,7 +47,12 @@ class HiveAcidMetadata(sparkSession: SparkSession,
                        fullyQualifiedTableName: String) extends Logging {
 
   // hive conf
-  private val hiveConf: HiveConf = HiveConverter.getHiveConf(sparkSession.sparkContext)
+  private val hiveConf: HiveConf = {
+    logDebug("*************")
+    logDebug(fullyQualifiedTableName)
+    logDebug("*************")
+    HiveConverter.getHiveConf(sparkSession.sparkContext)
+  }
 
   // a hive representation of the table
   val hTable: metadata.Table = {

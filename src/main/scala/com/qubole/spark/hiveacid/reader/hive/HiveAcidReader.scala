@@ -46,7 +46,7 @@ import com.qubole.spark.hiveacid.util._
 import org.apache.commons.codec.binary.Base64
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{Path, PathFilter}
-import org.apache.hadoop.hive.serde2.ColumnProjectionUtils
+// import org.apache.hadoop.hive.serde2.ColumnProjectionUtils
 import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapred.{FileInputFormat, InputFormat, JobConf}
 import org.apache.spark.broadcast.Broadcast
@@ -56,6 +56,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{SparkSession, functions}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.CastSupport
+import org.apache.spark.sql.catalyst.SQLConfHelper
 import org.apache.spark.sql.catalyst.catalog.CatalogTablePartition
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
@@ -66,20 +67,12 @@ import org.apache.spark.sql.hive.{Hive3Inspectors, HiveAcidUtils}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.unsafe.types.UTF8String
 
-/**
- * Helper class for scanning tables stored in Hadoop - e.g., to read
- * Hive tables that reside in the data warehouse directory.
- * @param sparkSession - spark session
- * @param readerOptions - reader options for creating RDD
- * @param hiveAcidOptions - hive related reader options for creating RDD
- * @param validWriteIds - validWriteIds
- */
 private[reader] class HiveAcidReader(sparkSession: SparkSession,
                                      readerOptions: ReaderOptions,
                                      hiveAcidOptions: HiveAcidReaderOptions,
                                      validWriteIds: ValidWriteIdList)
 
-extends CastSupport with Reader with Logging {
+extends CastSupport with Reader with Logging with SQLConfHelper{
 
   private val _minSplitsPerRDD = if (sparkSession.sparkContext.isLocal) {
     0 // will be split based on block by default.
@@ -88,8 +81,8 @@ extends CastSupport with Reader with Logging {
       sparkSession.sparkContext.defaultMinPartitions)
   }
 
-  SparkHadoopUtil.get.appendS3AndSparkHadoopConfigurations(
-    sparkSession.sparkContext.getConf, readerOptions.hadoopConf)
+  // SparkHadoopUtil.get.appendS3AndSparkHadoopConfigurations(
+  //  sparkSession.sparkContext.getConf, readerOptions.hadoopConf)
 
   if (readerOptions.readConf.predicatePushdownEnabled) {
     setPushDownFiltersInHadoopConf(readerOptions.hadoopConf, hiveAcidOptions.dataSchema,
@@ -397,9 +390,13 @@ extends CastSupport with Reader with Logging {
     val dataCols: Seq[String] = dataSchema.fields.map(_.name)
     val requiredColumnIndexes = requiredColumns.map(a => dataCols.indexOf(a): Integer)
     val (sortedIDs, sortedNames) = requiredColumnIndexes.zip(requiredColumns).sorted.unzip
-    conf.set(ColumnProjectionUtils.READ_ALL_COLUMNS, "false")
-    conf.set(ColumnProjectionUtils.READ_COLUMN_NAMES_CONF_STR, sortedNames.mkString(","))
-    conf.set(ColumnProjectionUtils.READ_COLUMN_IDS_CONF_STR, sortedIDs.mkString(","))
+    // ColumnProjectionUtils is deprecated
+    // conf.set(ColumnProjectionUtils.READ_ALL_COLUMNS, "false")
+    // conf.set(ColumnProjectionUtils.READ_COLUMN_NAMES_CONF_STR, sortedNames.mkString(","))
+    // conf.set(ColumnProjectionUtils.READ_COLUMN_IDS_CONF_STR, sortedIDs.mkString(","))
+    conf.set("hive.io.file.read.all.columns", "false")
+    conf.set("hive.io.file.readcolumn.names", sortedNames.mkString(","))
+    conf.set("hive.io.file.readcolumn.ids", sortedIDs.mkString(","))
   }
 
   private def setPushDownFiltersInHadoopConf(conf: Configuration,

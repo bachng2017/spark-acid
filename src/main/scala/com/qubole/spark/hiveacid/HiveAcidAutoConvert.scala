@@ -24,7 +24,8 @@ import java.util.Locale
 import com.qubole.spark.datasources.hiveacid.sql.execution.SparkAcidSqlParser
 import org.apache.spark.sql.{SparkSession, SparkSessionExtensions}
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, InsertIntoTable, LogicalPlan}
+// import org.apache.spark.sql.catalyst.plans.logical.{Filter, InsertIntoTable, LogicalPlan}
+import org.apache.spark.sql.catalyst.plans.logical.{Filter, InsertIntoStatement, LogicalPlan}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command.DDLUtils
 import org.apache.spark.sql.execution.datasources.LogicalRelation
@@ -54,9 +55,9 @@ case class HiveAcidAutoConvert(spark: SparkSession) extends Rule[LogicalPlan] {
   override def apply(plan: LogicalPlan): LogicalPlan = {
     plan resolveOperators {
       // Write path
-      case InsertIntoTable(r: HiveTableRelation, partition, query, overwrite, ifPartitionNotExists)
+      case InsertIntoStatement(r: HiveTableRelation, partition, Nil, query, overwrite, ifPartitionNotExists)
         if query.resolved && DDLUtils.isHiveTable(r.tableMeta) && isConvertible(r) =>
-        InsertIntoTable(convert(r), partition, query, overwrite, ifPartitionNotExists)
+        InsertIntoStatement(convert(r), partition, Nil, query, overwrite, ifPartitionNotExists)
 
       // Read path
       case relation: HiveTableRelation

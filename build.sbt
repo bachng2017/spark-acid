@@ -25,17 +25,14 @@ organization:= "com.qubole"
 	* Scala settings
 	*/
 
-crossScalaVersions := Seq("2.11.12")
+crossScalaVersions := Seq("2.12.10")
 
 scalaVersion := crossScalaVersions.value.head
 
 scalacOptions ++= Seq(
 	"-Xlint",
-	"-Xfatal-warnings",
 	"-deprecation",
-	"-unchecked",
-	"-optimise",
-	"-Yinline-warnings"
+	"-unchecked"
 )
 
 scalacOptions in (Compile, doc) ++= Seq(
@@ -45,7 +42,7 @@ scalacOptions in (Compile, doc) ++= Seq(
 /**************************
 	* Spark package settings
 	*/
-sparkVersion := sys.props.getOrElse("spark.version", "2.4.3")
+sparkVersion := sys.props.getOrElse("spark.version", "3.1.2")
 
 spIncludeMaven := true
 
@@ -70,8 +67,8 @@ libraryDependencies ++= Seq(
 	"org.apache.spark" %% "spark-catalyst" % sparkVersion.value % "provided" excludeAll(
 		ExclusionRule("org.apache", "hadoop-common"),
 		ExclusionRule("org.apache", "hadoop-hdfs")),
-	"org.apache.hadoop" % "hadoop-common" % "2.8.1" % "provided",
-	"org.apache.hadoop" % "hadoop-hdfs" % "2.8.1" % "provided",
+	"org.apache.hadoop" % "hadoop-common" % "3.1.2" % "provided",
+	"org.apache.hadoop" % "hadoop-hdfs" % "3.1.2" % "provided",
 	"org.apache.commons" % "commons-lang3" % "3.3.5" % "provided",
 	// antlr-runtime
 	"org.antlr" % "antlr4-runtime" % "4.7.2" % "provided"
@@ -81,8 +78,8 @@ lazy val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
 
 // Dependencies for Test
 libraryDependencies ++= Seq(
-	"org.apache.hadoop" % "hadoop-common" % "2.8.1" % "provided",
-	"org.apache.hadoop" % "hadoop-hdfs" % "2.8.1" % "provided",
+	"org.apache.hadoop" % "hadoop-common" % "3.1.2" % "provided",
+	"org.apache.hadoop" % "hadoop-hdfs" % "3.1.2" % "provided",
 	"org.apache.commons" % "commons-lang3" % "3.3.5" % "provided",
 	// Dependencies for tests
 	//
@@ -186,9 +183,9 @@ pomExtra :=
         </developers>
 
 
-publishMavenStyle := true
+publishMavenStyle := false
 
-bintrayReleaseOnPublish := false
+// bintrayReleaseOnPublish := false
 
 import ReleaseTransformations._
 
@@ -247,9 +244,9 @@ assemblyExcludedJars in assembly := {
 	* Release settings
 	*/
 
-publishMavenStyle := true
+publishMavenStyle := false
 
-bintrayReleaseOnPublish := false
+// bintrayReleaseOnPublish := false
 
 import ReleaseTransformations._
 

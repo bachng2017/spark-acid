@@ -22,7 +22,8 @@ import scala.collection.mutable.ListBuffer
 /**
  * An adaptation of [[org.apache.spark.sql.execution.SparkSqlAstBuilder]]
  */
-class SparkSqlAstBuilder(conf: SQLConf) extends AstBuilder(conf) {
+// class SparkSqlAstBuilder(conf: SQLConf) extends AstBuilder(conf) {
+class SparkSqlAstBuilder extends AstBuilder {
   import org.apache.spark.sql.catalyst.parser.ParserUtils._
 
   /**
@@ -174,14 +175,16 @@ class SparkSqlAstBuilder(conf: SQLConf) extends AstBuilder(conf) {
     val targetAlias = if (ctx.targetAlias != null) {
       val alias: SubqueryAlias = aliasPlan(ctx.targetAlias, targetRelation)
       targetRelation = alias
-      Some(alias.name)
+      // Some(alias.name)
+      Some(alias.identifier)
     } else {
       None
     }
     val sourceAlias = if (ctx.sourceAlias != null) {
       val alias = aliasPlan(ctx.sourceAlias, sourceRelation)
       sourceRelation = alias
-      Some(alias.name)
+      // Some(alias.name)
+      Some(alias.identifier)
     } else {
       None
     }
