@@ -19,10 +19,13 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier,SQLConfHelper}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.types.CalendarInterval
+
+// import org.apache.spark.unsafe.types.CalendarInterval
+import com.qubole.spark.unsafe.types.CalendarInterval
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+
 
 /**
  * An adaptation of [[org.apache.spark.sql.catalyst.parser.AstBuilder]]
@@ -1456,6 +1459,8 @@ class AstBuilder extends SqlHiveBaseVisitor[AnyRef] with SQLConfHelper with Logg
     }
   }
 
+
+
   /**
    * Create a [[CalendarInterval]] literal expression. An interval expression can contain multiple
    * unit value pairs, for instance: interval 2 months 2 days.
@@ -1463,9 +1468,8 @@ class AstBuilder extends SqlHiveBaseVisitor[AnyRef] with SQLConfHelper with Logg
   override def visitInterval(ctx: IntervalContext): Literal = withOrigin(ctx) {
     val intervals = ctx.intervalField.asScala.map(visitIntervalField)
     validate(intervals.nonEmpty, "at least one time unit should be given for interval literal", ctx)
-    // Literal(intervals.reduce(_.add(_)))
-    // Temporarily bypass
-    Literal(intervals)
+    Literal(intervals.reduce(_.add(_)))
+    // Literal(0)
   }
 
   /**
@@ -1479,7 +1483,6 @@ class AstBuilder extends SqlHiveBaseVisitor[AnyRef] with SQLConfHelper with Logg
     val s = value.getText
     try {
       val unitText = unit.getText.toLowerCase(Locale.ROOT)
-      /*
       val interval = (unitText, Option(to).map(_.getText.toLowerCase(Locale.ROOT))) match {
         case (u, None) if u.endsWith("s") =>
           // Handle plural forms, e.g: yearS/monthS/weekS/dayS/hourS/minuteS/hourS/...
@@ -1489,12 +1492,12 @@ class AstBuilder extends SqlHiveBaseVisitor[AnyRef] with SQLConfHelper with Logg
         case ("year", Some("month")) =>
           CalendarInterval.fromYearMonthString(s)
         case ("day", Some("second")) =>
-          CalendarInterval.fromDayTimeString(s)
+          CalendarInterval. fromDayTimeString(s)
         case (from, Some(t)) =>
           throw new ParseException(s"Intervals FROM $from TO $t are not supported.", ctx)
       }
-      */
-      val interval = new CalendarInterval(0,0,0)
+      // val interval = new CalendarInterval(0,0,0)
+
       validate(interval != null, "No interval can be constructed", ctx)
       interval
     } catch {
